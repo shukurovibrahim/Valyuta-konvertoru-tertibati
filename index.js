@@ -6,20 +6,34 @@ const leftInput = document.querySelector(".convert input");
 const rightInput = document.querySelector(".converted input");
 
 const inputPartsMaxLength = 5;
-const token = "9c2f69afc136cf4c7ca88988c5443f9c";
+const token = "c3fe442838982f0c20c0becb";
+const currencies = ["rub", "usd", "eur", "gbp"];
 
-let leftActiveCurrency = "rub",
-  rightActiveCurrency = "usd";
+let leftActiveCurrency = currencies[0],
+  rightActiveCurrency = currencies[1];
 
+  
 const generateRateString = (value, currentCurrency, oppositeCurrency) =>
-  `1 ${currentCurrency.toUpperCase()} = ${validateValue(
-    (value || "").toString(),
-  )} ${oppositeCurrency.toUpperCase()}`;
+  [
+    1,
+    currentCurrency.toUpperCase(),
+    "=",
+    validateValue((value || "").toString()),
+    oppositeCurrency.toUpperCase(),
+  ].join(" ");
 
 const renderCurrencyRate = () => {
   if (leftActiveCurrency === rightActiveCurrency) {
-    leftCurrencyRate.innerText = "";
-    rightCurrencyRate.innerText = "";
+    leftCurrencyRate.innerText = generateRateString(
+      1,
+      leftActiveCurrency,
+      rightActiveCurrency,
+    );
+    rightCurrencyRate.innerText = generateRateString(
+      1,
+      rightActiveCurrency,
+      leftActiveCurrency,
+    );
   } else {
     leftCurrencyRate.innerText = generateRateString(
       null,
@@ -36,32 +50,53 @@ const renderCurrencyRate = () => {
       convertCurrency(leftActiveCurrency, rightActiveCurrency, 1),
       convertCurrency(rightActiveCurrency, leftActiveCurrency, 1),
     ]).then(([current, opposite]) => {
-      if (current.success) {
-        leftCurrencyRate.innerText = generateRateString(
-          current.result,
-          leftActiveCurrency,
-          rightActiveCurrency,
-        );
-      }
-      if (opposite.success) {
-        rightCurrencyRate.innerText = generateRateString(
-          opposite.result,
-          rightActiveCurrency,
-          leftActiveCurrency,
-        );
-      }
+      leftCurrencyRate.innerText = generateRateString(
+        current,
+        leftActiveCurrency,
+        rightActiveCurrency,
+      );
+
+      rightCurrencyRate.innerText = generateRateString(
+        opposite,
+        rightActiveCurrency,
+        leftActiveCurrency,
+      );
     });
   }
 };
 
+// const fetchedCurrencies = {};
+// const convertCurrency = async (from, to, amount) => {
+//   const url = `https://v6.exchangerate-api.com/v6/${token}/latest/${from}`;
+//   if (fetchedCurrencies[from] && fetchedCurrencies[from][to.toUpperCase()])
+//     return fetchedCurrencies[from][to.toUpperCase()] * +amount;
+
+//   try {
+//     const res = await fetch(url);
+//     const data = await res.json();
+//     fetchedCurrencies[from] = data.conversion_rates;
+//     return data.conversion_rates[to.toUpperCase()] * +amount;
+//   } catch {
+//     throw new Error("Failed to fetch currency rates.");
+//   }
+// };
+
 const convertCurrency = async (from, to, amount) => {
-  const url = `http://api.exchangerate.host/convert?from=${from.toUpperCase()}&to=${to.toUpperCase()}&amount=${amount}&access_key=${token}`;
+  // Check if the browser is offline
+  if (!navigator.onLine) {
+    console.log("The currency converter is not available offline.");
+    return;
+  }
+  
+  const url = `https://v6.exchangerate-api.com/v6/${token}/latest/${from}`;
 
   try {
     const res = await fetch(url);
-    return await res.json();
-  } catch (e) {
-    throw new Error(`Failed to fetch currency rates.`);
+    const data = await res.json();
+    return data.conversion_rates[to.toUpperCase()] * +amount;
+  } catch (error) {
+    console.error("Failed to fetch currency rates:", error);
+    throw new Error("Failed to fetch currency rates.");
   }
 };
 
@@ -80,8 +115,8 @@ const renderCurrencyButton = (currency) => {
     await convertValue({
       currentInput: rightInput,
       otherInput: leftInput,
-      activeCurrency: leftActiveCurrency,
-      oppositeCurrency: rightActiveCurrency,
+      activeCurrency: rightActiveCurrency,
+      oppositeCurrency: leftActiveCurrency,
     });
 
     renderCurrencyRate();
@@ -101,32 +136,32 @@ const renderCurrencyButton = (currency) => {
     await convertValue({
       currentInput: leftInput,
       otherInput: rightInput,
-      activeCurrency: rightActiveCurrency,
-      oppositeCurrency: leftActiveCurrency,
+      activeCurrency: leftActiveCurrency,
+      oppositeCurrency: rightActiveCurrency,
     });
 
     renderCurrencyRate();
   });
 };
 
+
+
 const renderButtons = (currencies) => {
   currencies.forEach(renderCurrencyButton);
 };
 
-const currencies = ["rub", "usd", "eur", "gbp"];
-renderButtons(currencies);
 
 const validateValue = (value) => {
   value = value.replace(",", ".");
   const hasDotInEnd = value.endsWith(".");
   let [fullPart, dotPart] = value.split(".");
-  if (fullPart.length > inputPartsMaxLength) {
-    fullPart = fullPart.slice(0, inputPartsMaxLength);
-  }
+  // if (fullPart.length > inputPartsMaxLength) {
+  //   fullPart = fullPart.slice(0, inputPartsMaxLength);
+  // }
 
-  if (dotPart && dotPart.length > inputPartsMaxLength) {
-    dotPart = dotPart.slice(0, inputPartsMaxLength);
-  }
+  // if (dotPart && dotPart.length > inputPartsMaxLength) {
+  //   dotPart = dotPart.slice(0, inputPartsMaxLength);
+  // }
 
   return [fullPart, hasDotInEnd || dotPart?.length > 0 ? "." : "", dotPart]
     .filter(Boolean)
@@ -150,14 +185,17 @@ const convertValue = async ({
     return;
   }
 
-  const convertedValue = await convertCurrency(
+  let convertedValue = await convertCurrency(
     activeCurrency,
     oppositeCurrency,
     currentInput.value.toString(),
   );
-  if (!convertedValue.success) return;
-  otherInput.value = validateValue(convertedValue.result.toString());
+
+  if (!convertedValue) return;
+  convertedValue = convertedValue.toFixed(5);
+  otherInput.value = convertedValue;
 };
+
 
 const handleInput = (input, isLeft) => {
   input.addEventListener("input", async () => {
@@ -169,8 +207,19 @@ const handleInput = (input, isLeft) => {
       otherInput.value = "";
       return;
     }
-
+    input.value = input.value
+      .replace(/[^\d.,]/, "")
+      .replace(/^0{2,}/, "0")
+      .replace(/^0(\d)/, "$1");
+    if (input.value.startsWith(".")) input.value = "0" + input.value;
+    if (input.value.endsWith(",")) input.value = input.value;
     input.value = validateValue(input.value);
+
+    if (input.value === "0") {
+      otherInput.value = "0";
+      return;
+    }
+
     await convertValue({
       currentInput: input,
       otherInput,
@@ -180,6 +229,18 @@ const handleInput = (input, isLeft) => {
   });
 };
 
-handleInput(leftInput, true);
-handleInput(rightInput, false);
-renderCurrencyRate();
+const main = () => {
+  if (!navigator.onLine) {
+    alert("The currency converter is not available offline.");
+    return;
+  }
+
+  renderButtons(currencies);
+
+  handleInput(leftInput, true);
+  handleInput(rightInput, false);
+
+  renderCurrencyRate();
+};
+
+window.addEventListener("load", main);
