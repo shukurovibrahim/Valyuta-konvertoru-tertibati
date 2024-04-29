@@ -65,30 +65,16 @@ const renderCurrencyRate = () => {
   }
 };
 
-// const fetchedCurrencies = {};
-// const convertCurrency = async (from, to, amount) => {
-//   const url = `https://v6.exchangerate-api.com/v6/${token}/latest/${from}`;
-//   if (fetchedCurrencies[from] && fetchedCurrencies[from][to.toUpperCase()])
-//     return fetchedCurrencies[from][to.toUpperCase()] * +amount;
-
-//   try {
-//     const res = await fetch(url);
-//     const data = await res.json();
-//     fetchedCurrencies[from] = data.conversion_rates;
-//     return data.conversion_rates[to.toUpperCase()] * +amount;
-//   } catch {
-//     throw new Error("Failed to fetch currency rates.");
-//   }
-// };
-
 const convertCurrency = async (from, to, amount) => {
-  // Check if the browser is offline
   if (!navigator.onLine) {
     console.log("The currency converter is not available offline.");
     const hiddenDisplay = document.querySelector(".hidden");
-    hiddenDisplay.style.display = 'block'
+    hiddenDisplay.style.display = 'block';
     return;
-  } 
+  } else {
+    const hiddenDisplay = document.querySelector(".hidden");
+    hiddenDisplay.style.display = 'none';
+  }
   
   const url = `https://v6.exchangerate-api.com/v6/${token}/latest/${from}`;
 
@@ -157,14 +143,6 @@ const validateValue = (value) => {
   value = value.replace(",", ".");
   const hasDotInEnd = value.endsWith(".");
   let [fullPart, dotPart] = value.split(".");
-  // if (fullPart.length > inputPartsMaxLength) {
-  //   fullPart = fullPart.slice(0, inputPartsMaxLength);
-  // }
-
-  // if (dotPart && dotPart.length > inputPartsMaxLength) {
-  //   dotPart = dotPart.slice(0, inputPartsMaxLength);
-  // }
-
   return [fullPart, hasDotInEnd || dotPart?.length > 0 ? "." : "", dotPart]
     .filter(Boolean)
     .join("");
@@ -246,3 +224,14 @@ const main = () => {
 };
 
 window.addEventListener("load", main);
+
+
+window.addEventListener('online', () => {
+  const hiddenDisplay = document.querySelector(".hidden");
+  hiddenDisplay.style.display = 'none';
+});
+
+window.addEventListener('offline', () => {
+  const hiddenDisplay = document.querySelector(".hidden");
+  hiddenDisplay.style.display = 'block';
+});
