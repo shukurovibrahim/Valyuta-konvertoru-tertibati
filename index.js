@@ -85,8 +85,10 @@ const convertCurrency = async (from, to, amount) => {
   // Check if the browser is offline
   if (!navigator.onLine) {
     console.log("The currency converter is not available offline.");
+    const hiddenDisplay = document.querySelector(".hidden");
+    hiddenDisplay.style.display = 'block'
     return;
-  }
+  } 
   
   const url = `https://v6.exchangerate-api.com/v6/${token}/latest/${from}`;
 
